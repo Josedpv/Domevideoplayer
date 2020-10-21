@@ -43,7 +43,10 @@ var spotLightHelper;
 //Skybox
 var materiall;
 var Skybox;
-var video=[];
+var video;
+var guiALLF4;
+var guiALLF24;
+
 //Interface
 var gui;
 var obj;
@@ -107,58 +110,13 @@ function addLights()
     spotLight.position.set( obj.posX, obj.posY, obj.posZ );
 	scene.add( spotLight );
 	spotLightHelper = new THREE.SpotLightHelper( spotLight );
-	scene.add( spotLightHelper );
+	//scene.add( spotLightHelper );
 	//fireworklight
 	var light = new THREE.PointLight(0xffffff);
 	light.position.set(0,250,0);
 	scene.add(light);
 }
 
-function addGUI() 
-{
-	stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
-	document.body.appendChild( stats.dom );
-	var guiALL= gui.addFolder('Light');
-	var guiSL = guiALL.addFolder('SpotLight');
-	guiSL.add(obj, 'helpSpot').onChange(function (val) {
-		spotLightHelper.visible = val;
-	});
-	guiSL.add(obj, 'posX').onChange(function (val) {
-		spotLight.position.x = val;
-		spotLightHelper.update();
-	});
-	guiSL.add(obj, 'posY').onChange(function (val) {
-		spotLight.position.y = val;
-		spotLightHelper.update();
-
-	});
-	guiSL.add(obj, 'posZ').onChange(function (val) {
-		spotLight.position.z = val;
-		spotLightHelper.update();
-
-	});
-	//Ambient Light
-	var guiAL = guiALL.addFolder('AmbientLight');
-	guiAL.addColor(obj, 'color0').onChange(function (val) {
-		light.color.set(val);
-		hemisLight.color.set(val);
-	});
-	guiAL.add(obj, 'intAmbien').min(0).max(1).step(0.1).onChange(function (val) {
-		light.intensity = val;
-	}).name('Intensity');
-
-	//Hemisphere Light
-	var guiHL = guiALL.addFolder('HemisphereLight');
-	guiHL.addColor(obj, 'colorg').onChange(function (val) {
-		hemisLight.groundColor.set(val);
-	});
-	guiHL.add(obj, 'intHemis').min(0).max(1).step(0.1).onChange(function (val) {
-		hemisLight.intensity = val;
-	}).name('Intensity');
-	
-
-	
-}
 
 function main() {
 
@@ -187,7 +145,7 @@ function main() {
 	// loadDraco('model/draco/alocasia_s.drc');
 	// loadGLTF('model/glb/Flamingo.glb', [-2, 2, 1], [0.01, 0.01, 0.01]);
 	/// 
-	
+	/*
 	loadGLTF('model/gltf/capoeira/Capoeira.gltf', [1, 0, 0], [0.01, 0.01, 0.01]).then(function(gltff){
 		console.log('termine gltf!');
 		mixerCap = new THREE.AnimationMixer( gltff.scene );
@@ -215,7 +173,7 @@ function main() {
 		
 	}).catch(function (err) {
 		console.log(err);
-	});/**/ 
+	});/*
 	loadFBX('model/fbx/avatar1.fbx', [2, 0, -1], [0.01, 0.01, 0.01]).then(function(obj1){
 		// console.log('termine!');
 		mixer = new THREE.AnimationMixer( obj1 );
@@ -227,16 +185,10 @@ function main() {
 	 /*****************************START ADDED CODE***************/
 	 
 	 //create video
-	 for (let index = 0; index < 3; index++) {
-		 video[index]= document.createElement('video');
-		 video[index].load();
-		 video[index].autoplay= true;
-		 video[index].needsUpdate= true;
-		 video[index].loop	= true;
-		
-	 }
 	 
-	 
+	
+	
+
         var floorTexture = new THREE.TextureLoader().load( 'images/checkerboard.jpg' )
 	floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
 	floorTexture.repeat.set( 10, 10 );
@@ -253,26 +205,27 @@ function main() {
 
 
 	
+	addGUIChooseSkybox();
+	addGUIChooseSkyboxTime ();
 	
+	addSkybox(0,false);//Create animated sky
 
-	engine= new ParticleEngine();
-	engine.setValues(Examples.fountain);
-	engine.initialize(scene);
-	addSkybox(0,false);
-	addGUI();
-	addGUIFirework();
-	addGUISkybox();
-	addGUIChooseSkybox ();
+	//SkyTimeWarp(0);
+	//addGUI();
+	
+	addGUISkyboxproperties();
+	
      /*****************************FINISH ADDED CODE**************/
 	
 	
 }
  /*****************************START ADDED CODE***************/
-        function addGUISkybox(){//Create animated sky
+        function addGUISkyboxproperties(){//Create animated sky
 	
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
 	
-	
-	var guiSLSky = gui.addFolder('Skybox');
+	var guiSLSky = gui.addFolder('Skybox Properties');
 	guiSLSky.add(materiall, 'roughness').min(0).max(1).step(0.1).onChange(function (val) {
 		materiall.roughness = val;
 		//materiall.update();
@@ -285,34 +238,63 @@ function main() {
 	
 
 }
+function addGUIChooseSkybox (){
+	var parameters = 
+   {
+		four_minutes:   function() { addSkybox( 0, true ); },
+		twentyfour_minutes:   function() { addSkybox(  1, true ); },
+	
+   };
+  var guiALL= gui.addFolder('Choose Video');
+   guiALL.add( parameters, 'four_minutes'   ).name("Short Video (4)");
+   guiALL.add( parameters, 'twentyfour_minutes'   ).name("Long Video (24)");
+   
+
+}
 function addSkybox(num,	isnotfirsttime){//Create animated sky
 
+	if (num== 0){// 4 minutes video
+		video= document.createElement('video');
+		video.load();
+		video.autoplay= true; 
+		video.needsUpdate= true;
+		video.loop	= true;
+		video.src	= "images/Amanecer.mp4";
+		video.volume	= 0;
+		video.playbackRate=0.066;//4 minutos /60minutos = 0.066
+		
+		video.play();
+		video.currentTime=0 ;
+		
+		
+		guiALLF4.show();			
+		guiALLF24.hide();
+		guiALLF24.close();
+		
 	
+	} 
+	if (num== 1){ // 24 minutes video
+		video= document.createElement('video');
+		video.load();
+		video.autoplay= true; 
+		video.needsUpdate= true;
+		video.loop	= true;
+		video.src	= "images/Sky.mp4";
+		video.volume	= 0;
+		video.playbackRate= 0.4;//24 minutos /60minutos = 0.4
+		
+		video.play();
+		
+			guiALLF4.hide();
+			guiALLF24.show();
+			guiALLF4.close();
+	} 
+	
+
 	var texture;
 	
-	//choose the video
-	if (num== 0){
-		video[2].src	= "images/Lluvia.mp4";
-		video[0].src	= "images/Sky.mp4";
-		video[0].autoplay= true;	
-		video[2].autoplay= true;
-		 texture = new THREE.VideoTexture( video[0] );
-	} 
-	if (num== 1){
-		video[1].autoplay= true;
-		video[2].autoplay= true;
-		video[2].src	= "images/Sky.mp4"; 
-		video[1].src	= "images/Lluvia.mp4";
-		 texture = new THREE.VideoTexture( video[1] );
-	} 
-	if (num==2){
-		video[2].autoplay= true;
-		video[2].src	= "images/Amanecer.mp4";
-		 texture = new THREE.VideoTexture( video[2] );
-		 
-	} 
 	
-	
+	texture = new THREE.VideoTexture( video );
 	
 	
 
@@ -332,6 +314,8 @@ function addSkybox(num,	isnotfirsttime){//Create animated sky
 
 	} );
 	if (isnotfirsttime){
+		
+	 
 		scene.remove( Skybox );
 	}
 	
@@ -342,62 +326,98 @@ function addSkybox(num,	isnotfirsttime){//Create animated sky
 	//add sky
 	scene.add(Skybox);
 }
+function SkyTimeWarp(TimeWarp,VideoTime){//Create animated sky
+
+	//choose the video
+	if (VideoTime== 0){
+	
+		SkyTimeWarp_4min(TimeWarp);
+		 
+	} 
+	if (VideoTime== 1){
+		SkyTimeWarp_24min(TimeWarp) ;
+	} 	
+}
+function SkyTimeWarp_4min(num){//Create animated sky
+
+	//choose the video
+	if (num== 0){
+	
+		video.currentTime=0 ;
+		 
+	} 
+	if (num== 1){
+		video.currentTime=60 ;
+	} 
+	if (num==2){
+	
+		video.currentTime=120 ;
+	} 
+	if (num==3){
+	
+		video.currentTime=180 ;
+	} 
+	
+	
+}
+function SkyTimeWarp_24min(num){//Create animated sky
+
+	//choose the video
+	if (num== 0){
+	
+		video.currentTime=0 ;
+		 
+	} 
+	if (num== 1){
+		video.currentTime=360 ;
+	} 
+	if (num==2){
+	
+		video.currentTime=720 ;
+	} 
+	if (num==3){
+	
+		video.currentTime=1080 ;
+	} 
+	
+	
+}
      /*****************************FINISH ADDED CODE**************/
 
-function restartEngine(parameters)
-{
-	//resetCamera();
-	
-	engine.destroy(scene);
-	engine = new ParticleEngine();
-	engine.setValues( parameters );
-	engine.initialize(scene);
-}
+
  /*****************************START ADDED CODE***************/
         
-function addGUIFirework (){
-	 var parameters = 
-	{
-		fountain:   function() { restartEngine( Examples.fountain   ); },
-		startunnel: function() { restartEngine( Examples.startunnel ); },		
-		starfield:  function() { restartEngine( Examples.starfield  ); },		
-		fireflies:  function() { restartEngine( Examples.fireflies  ); },		
-		clouds:     function() { restartEngine( Examples.clouds     ); },		
-		smoke:      function() { restartEngine( Examples.smoke      ); },		
-		fireball:   function() { restartEngine( Examples.fireball   ); },		
-		candle:     function() { restartEngine( Examples.candle     ); },		
-		rain:       function() { restartEngine( Examples.rain       ); },		
-		snow:       function() { restartEngine( Examples.snow       ); },		
-		firework:   function() { restartEngine( Examples.firework   ); }		
-	};
-	var guiALLF= gui.addFolder('FireWorks');
-	guiALLF.add( parameters, 'fountain'   ).name("Star Fountain");
-	guiALLF.add( parameters, 'startunnel' ).name("Star Tunnel");
-	guiALLF.add( parameters, 'starfield'  ).name("Star Field");
-	guiALLF.add( parameters, 'fireflies'  ).name("Fireflies");
-	guiALLF.add( parameters, 'clouds'     ).name("Clouds");
-	guiALLF.add( parameters, 'smoke'      ).name("Smoke");
-	guiALLF.add( parameters, 'fireball'   ).name("Fireball");
-	guiALLF.add( parameters, 'candle'     ).name("Candle");
-	guiALLF.add( parameters, 'rain'       ).name("Rain");
-	guiALLF.add( parameters, 'snow'       ).name("Snow");
-	guiALLF.add( parameters, 'firework'   ).name("Firework");
-}
 
-function addGUIChooseSkybox (){
-	var parameters = 
-   {
-	   blueSky:   function() { addSkybox( 0 , true  ); },
-	   rain:   function() { addSkybox( 1 , true  ); },		
-	   sunrise:   function() { addSkybox( 2 , true  ); }	
+function addGUIChooseSkyboxTime (){
 	
+	var parameters4 = 
+   {
+		sunrise:   function() { SkyTimeWarp( 0, 0 ); },
+		day:   function() { SkyTimeWarp(  1, 0 ); },
+		sunset:   function() { SkyTimeWarp( 2, 0  ); },			
+		nigth:   function() { SkyTimeWarp( 3, 0 ); }
    };
-   var guiALLF= gui.addFolder('Choose Sky');
-   guiALLF.add( parameters, 'blueSky'   ).name("BlueSky");
-   guiALLF.add( parameters, 'rain'   ).name("Rainning");
-   guiALLF.add( parameters, 'sunrise'   ).name("Sunrise");
-
+   var parameters24 = 
+   {
+		sunrise:   function() { SkyTimeWarp( 0, 1 ); },
+		day:   function() { SkyTimeWarp(  1, 1 ); },
+		sunset:   function() { SkyTimeWarp( 2, 1  ); },			
+		nigth:   function() { SkyTimeWarp( 3, 1 ); }
+   };
+   guiALLF4= gui.addFolder('Time Warp 4');
+   guiALLF4.add( parameters4, 'sunrise'   ).name("Sunrise");
+   guiALLF4.add( parameters4, 'day'   ).name("Day");
+   guiALLF4.add( parameters4, 'sunset'   ).name("Sunset"); 
+   guiALLF4.add( parameters4, 'nigth'   ).name("Nigth");
+  
+   guiALLF24= gui.addFolder('Time Warp 24');
+   guiALLF24.add( parameters24, 'sunrise'   ).name("Sunrise");
+   guiALLF24.add( parameters24, 'day'   ).name("Day");
+   guiALLF24.add( parameters24, 'sunset'   ).name("Sunset"); 
+   guiALLF24.add( parameters24, 'nigth'   ).name("Nigth");
+   
 }
+
      /*****************************FINISH ADDED CODE**************/
 function loadFBX(path,pos,scale) {
 	const promise = new Promise(function (resolve, reject) {
@@ -695,7 +715,7 @@ function animate()
   controls.update();
   stats.update();
   var dt = clock.getDelta();
-  engine.update( dt * 0.5);	
+  	
   //controls.update();
 }
 
